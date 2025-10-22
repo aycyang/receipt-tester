@@ -1,5 +1,6 @@
+let kImageContents
+
 window.onload = function() {
-  redirectToRecurseSubdomainIfNeeded()
   setupLoginSection()
   setupTextSection()
   setupImageSection()
@@ -7,8 +8,47 @@ window.onload = function() {
 
 function setupImageSection() {
   if (!getReceiptCsrfCookie()) {
+    printImageButton.disabled = true
     imagePicker.disabled = true
   }
+  imagePicker.addEventListener('change', async () => {
+    printImageButton.disabled = imagePicker.files.length !== 1
+  })
+  printImageButton.addEventListener('click', async (event) => {
+    const res = await sendImageToPrinter()
+    updateResponseDiv(imageResponseDiv, 'Response:', res)
+  })
+}
+
+function updateResponseDiv(div, label, res) {
+  if (div.children.length === 0) {
+    div.appendChild(p(label))
+  }
+  for (let i = 1; i < div.children.length; i++) {
+    div.removeChild(div.children[i])
+  }
+  div.appendChild(pre(JSON.stringify(res)))
+}
+
+function sendImageToPrinter() {
+  const csrf = getReceiptCsrfCookie()
+  if (!csrf) {
+    console.error('You are not logged into Receipt API Server! Aborting...')
+    return
+  }
+  if (imagePicker.files.length === 0) {
+    console.error('No image loaded!')
+    return
+  }
+  return fetch('https://receipt.recurse.com/image', {
+    method: 'POST',
+    credentials: 'include',
+    headers: {
+      'Content-Type': 'application/octet-stream',
+      'X-CSRF-Token': csrf,
+    },
+    body: imagePicker.files[0],
+  })
 }
 
 function setupTextSection() {
@@ -17,10 +57,9 @@ function setupTextSection() {
   }
   printTextButton.addEventListener('click', async (event) => {
     const text = textField.value
-    console.log(text)
     setLastPrinted(text)
     const res = await sendTextToPrinter(text)
-    setTextResponse(res)
+    updateResponseDiv(textResponseDiv, 'Response:', res)
     textField.innerHTML = ''
   })
 }
@@ -44,16 +83,6 @@ function sendTextToPrinter(text) {
   })
 }
 
-function setTextResponse(res) {
-  if (textResponseDiv.children.length === 0) {
-    textResponseDiv.appendChild(p('Response:'))
-  }
-  for (let i = 1; i < textResponseDiv.children.length; i++) {
-    textResponseDiv.removeChild(textResponseDiv.children[i])
-  }
-  textResponseDiv.appendChild(pre(JSON.stringify(res)))
-}
-
 function setLastPrinted(text) {
   if (lastPrintedDiv.children.length === 0) {
     lastPrintedDiv.appendChild(p('Sent:'))
@@ -62,10 +91,6 @@ function setLastPrinted(text) {
     lastPrintedDiv.removeChild(lastPrintedDiv.children[i])
   }
   lastPrintedDiv.appendChild(pre(text))
-}
-
-function redirectToRecurseSubdomainIfNeeded() {
-  // TODO
 }
 
 function parseCookies(cookieString) {
@@ -100,6 +125,7 @@ function p(text) {
 function setupLoginSection() {
   if (!window.location.origin.match(/.recurse.com\/?$/)) {
     loginDiv.appendChild(p('This is not a *.recurse.com subdomain, so it will not be able to make authenticated requests to <a href="https://receipt.recurse.com">https://receipt.recurse.com</a>.'))
+    loginDiv.appendChild(p('Please visit <a href="https://receipt-tester.recurse.com">https://receipt-tester.recurse.com</a> for the full experience.'))
     return
   }
   if (getReceiptCsrfCookie()) {
