@@ -1,9 +1,22 @@
-let kImageContents
-
 window.onload = function() {
   setupLoginSection()
   setupTextSection()
   setupImageSection()
+  setupEscPosSection()
+}
+
+function setupEscPosSection() {
+  if (!getReceiptCsrfCookie()) {
+    sendEscPosButton.disabled = true
+  }
+  sendEscPosButton.addEventListener('click', async (event) => {
+    sendEscPosButton.disabled = true
+    initResponseDiv(escPosResponseDiv, 'Response: (pending...)')
+    // TODO
+    initResponseDiv(escPosResponseDiv, 'Response:')
+    updateResponseDiv(escPosResponseDiv, 999, '{}')
+    sendEscPosButton.disabled = false
+  })
 }
 
 function setupImageSection() {
