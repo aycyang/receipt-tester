@@ -15,19 +15,33 @@ function setupImageSection() {
     printImageButton.disabled = imagePicker.files.length !== 1
   })
   printImageButton.addEventListener('click', async (event) => {
+    printImageButton.disabled = true
+    initResponseDiv(imageResponseDiv, 'Response: (pending...)')
     const res = await sendImageToPrinter()
-    updateResponseDiv(imageResponseDiv, 'Response:', res)
+    const jsonBody = await res.json()
+    initResponseDiv(imageResponseDiv, 'Response:')
+    updateResponseDiv(imageResponseDiv, res.status, jsonBody)
+    printImageButton.disabled = false
   })
 }
 
-function updateResponseDiv(div, label, res) {
-  if (div.children.length === 0) {
-    div.appendChild(p(label))
+function clear(node) {
+  while (node.firstChild) {
+    node.removeChild(node.lastChild)
   }
+}
+
+function initResponseDiv(div, label) {
+  clear(div)
+  div.appendChild(p(label))
   for (let i = 1; i < div.children.length; i++) {
     div.removeChild(div.children[i])
   }
-  div.appendChild(pre(JSON.stringify(res)))
+}
+
+function updateResponseDiv(div, status, jsonResponse) {
+  div.appendChild(pre(status))
+  div.appendChild(pre(JSON.stringify(jsonResponse, null, 2)))
 }
 
 function sendImageToPrinter() {
@@ -56,11 +70,16 @@ function setupTextSection() {
     printTextButton.disabled = true
   }
   printTextButton.addEventListener('click', async (event) => {
+    printTextButton.disabled = true
     const text = textField.value
     setLastPrinted(text)
+    initResponseDiv(textResponseDiv, 'Response: (pending...)')
     const res = await sendTextToPrinter(text)
-    updateResponseDiv(textResponseDiv, 'Response:', res)
+    const jsonBody = await res.json()
+    initResponseDiv(textResponseDiv, 'Response:')
+    updateResponseDiv(textResponseDiv, res.status, jsonBody)
     textField.innerHTML = ''
+    printTextButton.disabled = false
   })
 }
 
