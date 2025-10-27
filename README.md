@@ -1,5 +1,5 @@
-# Example disco Static Site
+# Receipt API Tester
 
-This is an example static site.
+Debug testing interface for Receipt Printer API
 
-[Read the documentation](https://docs.letsdisco.dev/deployment-guides/static-site) on how to deploy static sites using disco.
+Deployed at <https://receipt-tester.recurse.com>
