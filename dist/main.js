@@ -1,4 +1,10 @@
+'use strict'
+
+let isSettingsHidden = true
+
 window.onload = function() {
+  localStorage.setItem('serverHostname', localStorage.getItem('serverHostname') ?? 'https://receipt.recurse.com')
+  setupSettingsSection()
   setupLoginSection()
   setupTextSection()
   setupImageSection()
@@ -31,9 +37,13 @@ function setupImageSection() {
     printImageButton.disabled = true
     initResponseDiv(imageResponseDiv, 'Response: (pending...)')
     const res = await sendImageToPrinter()
-    const jsonBody = await res.json()
     initResponseDiv(imageResponseDiv, 'Response:')
-    updateResponseDiv(imageResponseDiv, res.status, jsonBody)
+    if (res.status == 200) {
+      const jsonBody = await res.json()
+      updateResponseDiv(imageResponseDiv, res.status, jsonBody)
+    } else {
+      updateResponseDiv(imageResponseDiv, res.status, '')
+    }
     printImageButton.disabled = false
   })
 }
@@ -67,7 +77,9 @@ function sendImageToPrinter() {
     console.error('No image loaded!')
     return
   }
-  return fetch('https://receipt.recurse.com/image', {
+  const serverHostname = localStorage.getItem('serverHostname')
+  const url = `${serverHostname}/image`
+  return fetch(url, {
     method: 'POST',
     credentials: 'include',
     headers: {
@@ -88,9 +100,13 @@ function setupTextSection() {
     setLastPrinted(text)
     initResponseDiv(textResponseDiv, 'Response: (pending...)')
     const res = await sendTextToPrinter(text)
-    const jsonBody = await res.json()
     initResponseDiv(textResponseDiv, 'Response:')
-    updateResponseDiv(textResponseDiv, res.status, jsonBody)
+    if (res.status == 200) {
+      const jsonBody = await res.json()
+      updateResponseDiv(textResponseDiv, res.status, jsonBody)
+    } else {
+      updateResponseDiv(textResponseDiv, res.status, '')
+    }
     textField.innerHTML = ''
     printTextButton.disabled = false
   })
@@ -102,7 +118,9 @@ function sendTextToPrinter(text) {
     console.error('You are not logged into Receipt API Server! Aborting...')
     return
   }
-  return fetch('https://receipt.recurse.com/text', {
+  const serverHostname = localStorage.getItem('serverHostname')
+  const url = `${serverHostname}/text`
+  return fetch(url, {
     method: 'POST',
     credentials: 'include',
     headers: {
@@ -154,17 +172,106 @@ function p(text) {
   return el
 }
 
+function input() {
+  const el = document.createElement('input')
+  return el
+}
+
+function div() {
+  const el = document.createElement('div')
+  return el
+}
+
+function label(text) {
+  const el = document.createElement('label')
+  el.innerHTML = text
+  return el
+}
+
+function checkbox() {
+  const el = document.createElement('input')
+  el.type = 'checkbox'
+  return el
+}
+
+function showOrHideSettings() {
+  if (isSettingsHidden) {
+    toggleSettingsArrow.innerHTML = '&blacktriangledown;'
+    toggleSettingsButton.className = 'active'
+    settingsDiv.className = 'active'
+    isSettingsHidden = false
+  } else {
+    toggleSettingsArrow.innerHTML = '&blacktriangleright;'
+    toggleSettingsButton.className = 'hidden'
+    settingsDiv.className = 'hidden'
+    isSettingsHidden = true
+  }
+}
+
+function setupSettingsSection() {
+  toggleSettingsButton.addEventListener('click', showOrHideSettings)
+
+  if (isSettingsHidden) {
+    toggleSettingsButton.className = 'hidden'
+    settingsDiv.className = 'hidden'
+    toggleSettingsArrow.innerHTML = '&blacktriangleright;'
+  } else {
+    toggleSettingsButton.className = 'active'
+    settingsDiv.className = 'active'
+    toggleSettingsArrow.innerHTML = '&blacktriangledown;'
+  }
+
+  {
+    const d = div()
+    const i = input()
+    const l = label('API server hostname ')
+    i.value = localStorage.getItem('serverHostname')
+    i.addEventListener('input', () => {
+      localStorage.setItem('serverHostname', i.value)
+      // manually update login section
+      setupLoginSection()
+    })
+    d.appendChild(l)
+    d.appendChild(i)
+    settingsDiv.appendChild(d)
+  }
+
+  {
+    const d = div()
+    const c = checkbox()
+    const l = label('Bypass CORS warning? ')
+    c.checked = (localStorage.getItem('ignoreOrigin') === 'true')
+    c.addEventListener('change', () => {
+      localStorage.setItem('ignoreOrigin', c.checked)
+      // manually update login section
+      setupLoginSection()
+    })
+    d.appendChild(l)
+    d.appendChild(c)
+    settingsDiv.appendChild(d)
+  }
+}
+
 function setupLoginSection() {
-  if (!window.location.origin.match(/.recurse.com\/?$/)) {
+  clear(loginDiv)
+
+  const isRecurseSubdomain = window.location.origin.match(/.recurse.com\/?$/)
+  const ignoreOrigin = (localStorage.getItem('ignoreOrigin') === 'true')
+
+  if (!ignoreOrigin && !isRecurseSubdomain) {
     loginDiv.appendChild(p('This is not a *.recurse.com subdomain, so it will not be able to make authenticated requests to <a href="https://receipt.recurse.com">https://receipt.recurse.com</a>.'))
     loginDiv.appendChild(p('Please visit <a href="https://receipt-tester.recurse.com">https://receipt-tester.recurse.com</a> for the full experience.'))
     return
   }
+
   if (getReceiptCsrfCookie()) {
     loginDiv.appendChild(p('You are logged in.'))
     return
   }
-  loginDiv.appendChild(a('login', `https://receipt.recurse.com/login?redirect_uri=${window.location.href}`))
+
+  const serverHostname = localStorage.getItem('serverHostname')
+  const url = `${serverHostname}/login?redirect_uri=${window.location.href}`
+  loginDiv.appendChild(a('login', url))
 }
 
 function getReceiptCsrfCookie() {

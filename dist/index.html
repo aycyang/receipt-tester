@@ -4,6 +4,21 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Receipt Tester</title>
+  <style>
+    #settingsDiv.hidden {
+      display: none;
+    }
+    #toggleSettingsButton.active {
+      font-weight: bold;
+      color: #000;
+    }
+    #toggleSettingsButton.hidden {
+      color: #999;
+    }
+    #toggleSettingsButton:hover {
+      color: #555;
+    }
+  </style>
 </head>
 <body>
 <h1>Receipt Tester</h1>
@@ -31,6 +46,16 @@
 </div>
 <br>
 <p>View the <a href="https://github.com/aycyang/receipt-tester">source code</a><p>
+
+<hr>
+
+<span id="toggleSettingsButton">
+<span id="toggleSettingsArrow"></span>
+Developer settings
+</span>
+<div id="settingsDiv">
+</div>
+
 <script src="main.js"></script>
 </body>
 </html>
